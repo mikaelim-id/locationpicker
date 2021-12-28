@@ -12,7 +12,7 @@ class RichSuggestion extends StatelessWidget {
     return Material(
       child: InkWell(
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 35),
           child: RichText(text: TextSpan(children: getStyledTexts(context))),
         ),
         onTap: onTap,
