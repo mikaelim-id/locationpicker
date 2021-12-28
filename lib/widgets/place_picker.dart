@@ -315,7 +315,7 @@ class PlacePickerState extends State<PlacePicker> {
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: size.width,
-        top: 100,
+        top: 130,
         child: Material(elevation: 1, child: Column(children: suggestions)),
       ),
     );
