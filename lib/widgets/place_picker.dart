@@ -8,9 +8,15 @@ import 'package:http/http.dart' as http;
 import 'package:place_picker/entities/entities.dart';
 import 'package:place_picker/entities/localization_item.dart';
 import 'package:place_picker/widgets/widgets.dart';
-
+import 'dart:math';
 import '../uuid.dart';
 
+/// Place picker widget made with map widget from
+/// [google_maps_flutter](https://github.com/flutter/plugins/tree/master/packages/google_maps_flutter)
+/// and other API calls to [Google Places API](https://developers.google.com/places/web-service/intro)
+///
+/// API key provided should have `Maps SDK for Android`, `Maps SDK for iOS`
+/// and `Places API`  enabled for it
 /// Place picker widget made with map widget from
 /// [google_maps_flutter](https://github.com/flutter/plugins/tree/master/packages/google_maps_flutter)
 /// and other API calls to [Google Places API](https://developers.google.com/places/web-service/intro)
@@ -26,8 +32,9 @@ class PlacePicker extends StatefulWidget {
   /// map does not pan to the user's current location.
   final LatLng displayLocation;
   LocalizationItem localizationItem;
+  final List<String> countries;
 
-  PlacePicker(this.apiKey, {this.displayLocation, this.localizationItem}) {
+  PlacePicker(this.apiKey, {this.displayLocation, this.localizationItem, this.countries}) {
     if (this.localizationItem == null) {
       this.localizationItem = new LocalizationItem();
     }
@@ -49,8 +56,6 @@ class PlacePickerState extends State<PlacePicker> {
 
   /// Overlay to display autocomplete suggestions
   OverlayEntry overlayEntry;
-
-  List<NearbyPlace> nearbyPlaces = List();
 
   /// Session token required for autocomplete API call
   String sessionToken = Uuid().generateV4();
@@ -119,31 +124,10 @@ class PlacePickerState extends State<PlacePicker> {
             ),
           ),
           if (!this.hasSearchTerm)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  SelectPlaceAction(
-                      getLocationName(),
-                      () => Navigator.of(context).pop(this.locationResult),
-                      widget.localizationItem.tapToSelectLocation),
-                  Divider(height: 8),
-                  Padding(
-                    child: Text(widget.localizationItem.nearBy,
-                        style: TextStyle(fontSize: 16)),
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  ),
-                  Expanded(
-                    child: ListView(
-                      children: nearbyPlaces
-                          .map((it) => NearbyPlaceItem(
-                              it, () => moveToLocation(it.latLng)))
-                          .toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            SelectPlaceAction(
+                getLocationName(),
+                    () => Navigator.of(context).pop(this.locationResult),
+                widget.localizationItem.tapToSelectLocation),
         ],
       ),
     );
@@ -188,7 +172,7 @@ class PlacePickerState extends State<PlacePicker> {
     final size = renderBox.size;
 
     final RenderBox appBarBox =
-        this.appBarKey.currentContext.findRenderObject();
+    this.appBarKey.currentContext.findRenderObject();
 
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -225,11 +209,18 @@ class PlacePickerState extends State<PlacePicker> {
     try {
       place = place.replaceAll(" ", "+");
 
+      final countries = widget.countries;
+
+      // Currently, you can use components to filter by up to 5 countries. from https://developers.google.com/places/web-service/autocomplete
+      String regionParam = countries?.isNotEmpty == true
+          ? "&components=country:${countries.sublist(0, min(countries.length, 5)).join('|country:')}"
+          : "";
+
       var endpoint =
           "https://maps.googleapis.com/maps/api/place/autocomplete/json?"
           "key=${widget.apiKey}&"
           "language=${widget.localizationItem.languageCode}&"
-          "input={$place}&sessiontoken=${this.sessionToken}";
+          "input={$place}$regionParam&sessiontoken=${this.sessionToken}";
 
       if (this.locationResult != null) {
         endpoint += "&location=${this.locationResult.latLng.latitude}," +
@@ -317,7 +308,7 @@ class PlacePickerState extends State<PlacePicker> {
     Size size = renderBox.size;
 
     final RenderBox appBarBox =
-        this.appBarKey.currentContext.findRenderObject();
+    this.appBarKey.currentContext.findRenderObject();
 
     clearOverlay();
 
@@ -342,14 +333,6 @@ class PlacePickerState extends State<PlacePicker> {
       return widget.localizationItem.unnamedLocation;
     }
 
-    for (NearbyPlace np in this.nearbyPlaces) {
-      if (np.latLng == this.locationResult.latLng &&
-          np.name != this.locationResult.locality) {
-        this.locationResult.name = np.name;
-        return "${np.name}, ${this.locationResult.locality}";
-      }
-    }
-
     return "${this.locationResult.name}, ${this.locationResult.locality}";
   }
 
@@ -361,48 +344,6 @@ class PlacePickerState extends State<PlacePicker> {
       markers.add(
           Marker(markerId: MarkerId("selected-location"), position: latLng));
     });
-  }
-
-  /// Fetches and updates the nearby places to the provided lat,lng
-  void getNearbyPlaces(LatLng latLng) async {
-    try {
-      final url = Uri.parse(
-          "https://maps.googleapis.com/maps/api/place/nearbysearch/json?"
-          "key=${widget.apiKey}&location=${latLng.latitude},${latLng.longitude}"
-          "&radius=150&language=${widget.localizationItem.languageCode}");
-
-      final response = await http.get(url);
-
-      if (response.statusCode != 200) {
-        throw Error();
-      }
-
-      final responseJson = jsonDecode(response.body);
-
-      if (responseJson['results'] == null) {
-        throw Error();
-      }
-
-      this.nearbyPlaces.clear();
-
-      for (Map<String, dynamic> item in responseJson['results']) {
-        final nearbyPlace = NearbyPlace()
-          ..name = item['name']
-          ..icon = item['icon']
-          ..latLng = LatLng(item['geometry']['location']['lat'],
-              item['geometry']['location']['lng']);
-
-        this.nearbyPlaces.add(nearbyPlace);
-      }
-
-      // to update the nearby places
-      setState(() {
-        // this is to require the result to show
-        this.hasSearchTerm = false;
-      });
-    } catch (e) {
-      //
-    }
   }
 
   /// This method gets the human readable name of the location. Mostly appears
@@ -520,8 +461,6 @@ class PlacePickerState extends State<PlacePicker> {
     setMarker(latLng);
 
     reverseGeocodeLatLng(latLng);
-
-    getNearbyPlaces(latLng);
   }
 
   void moveToCurrentUserLocation() {
@@ -539,3 +478,4 @@ class PlacePickerState extends State<PlacePicker> {
     });
   }
 }
+
