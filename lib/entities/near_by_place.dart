@@ -4,12 +4,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 class NearbyPlace {
   /// The human-readable name of the location provided. This value is provided
   /// for [LocationResult.name] when the user selects this nearby place.
-  String name;
+  late String name;
 
   /// The icon identifying the kind of place provided. Eg. lodging, chapel,
   /// hospital, etc.
-  String icon;
+  late String icon;
 
   // Latitude/Longitude of the provided location.
-  LatLng latLng;
+  late LatLng latLng;
 }

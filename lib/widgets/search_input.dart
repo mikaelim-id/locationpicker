@@ -15,7 +15,7 @@ class SearchInput extends StatefulWidget {
 class SearchInputState extends State<SearchInput> {
   TextEditingController editController = TextEditingController();
 
-  Timer debouncer;
+  late Timer debouncer;
 
   bool hasSearchEntry = false;
 
@@ -58,7 +58,7 @@ class SearchInputState extends State<SearchInput> {
       child: Row(
         children: <Widget>[
           Icon(Icons.search,
-              color: Theme.of(context).textTheme.bodyText1.color),
+              color: Theme.of(context).textTheme.bodyText1!.color),
           SizedBox(width: 8),
           Expanded(
             child: TextField(
