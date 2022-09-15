@@ -225,8 +225,8 @@ class PlacePickerState extends State<PlacePicker> {
           "input={$place}$regionParam&sessiontoken=${this.sessionToken}";
 
       if (this.locationResult != null) {
-        endpoint += "&location=${this.locationResult?.latLng.latitude}," +
-            "${this.locationResult?.latLng.longitude}";
+        endpoint += "&location=${this.locationResult?.latLng?.latitude}," +
+            "${this.locationResult?.latLng?.longitude}";
       }
 
       final response = await http.get(Uri.parse(endpoint));
