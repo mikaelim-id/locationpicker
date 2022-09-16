@@ -25,10 +25,6 @@ class LocationResult {
 
   AddressComponent? administrativeAreaLevel2;
 
-  AddressComponent? subLocalityLevel1;
-
-  AddressComponent? subLocalityLevel2;
-
   String? postalCode;
 
   String? placeId;

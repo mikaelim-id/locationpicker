@@ -441,11 +441,7 @@ class PlacePickerState extends State<PlacePicker> {
           ..administrativeAreaLevel2 = AddressComponent(
               name: administrativeAreaLevel2,
               shortName: administrativeAreaLevel2)
-          ..city = AddressComponent(name: city, shortName: city)
-          ..subLocalityLevel1 = AddressComponent(
-              name: subLocalityLevel1, shortName: subLocalityLevel1)
-          ..subLocalityLevel2 = AddressComponent(
-              name: subLocalityLevel2, shortName: subLocalityLevel2);
+          ..city = AddressComponent(name: city, shortName: city);
       });
     } catch (e) {
       print(e);
