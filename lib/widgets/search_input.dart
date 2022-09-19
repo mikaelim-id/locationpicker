@@ -76,7 +76,6 @@ class SearchInputState extends State<SearchInput> {
               },
             ),
           ),
-          SizedBox(width: 8),
           if (this.hasSearchEntry)
             GestureDetector(
               child: Icon(Icons.clear),
