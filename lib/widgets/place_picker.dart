@@ -382,6 +382,8 @@ class PlacePickerState extends State<PlacePicker> {
             administrativeAreaLevel2,
             city;
         bool isOnStreet = false;
+        print(result);
+        print(result['address_components']);
         if (result['address_components'] is List<dynamic> &&
             result['address_components'].length != null &&
             result['address_components'].length > 0) {
