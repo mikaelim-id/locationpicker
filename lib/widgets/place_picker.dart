@@ -417,7 +417,8 @@ class PlacePickerState extends State<PlacePicker> {
             }
           }
         }
-
+        print(result);
+        print("result");
         city = locality;
         print(result['formatted_address']);
         this.locationResult = LocationResult()
