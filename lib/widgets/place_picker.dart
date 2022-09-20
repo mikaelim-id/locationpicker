@@ -382,8 +382,6 @@ class PlacePickerState extends State<PlacePicker> {
             administrativeAreaLevel2,
             city;
         bool isOnStreet = false;
-        print(result);
-        print(result['address_components']);
         if (result['address_components'] is List<dynamic> &&
             result['address_components'].length != null &&
             result['address_components'].length > 0) {
@@ -391,9 +389,7 @@ class PlacePickerState extends State<PlacePicker> {
             var tmp = result['address_components'][i];
             var types = tmp["types"] as List<dynamic>;
             var shortName = tmp['short_name'];
-            if (types == null) {
-              continue;
-            }
+
             if (i == 0) {
               // [street_number]
               name = shortName;
@@ -421,8 +417,9 @@ class PlacePickerState extends State<PlacePicker> {
             }
           }
         }
-        locality = locality ?? administrativeAreaLevel1;
+
         city = locality;
+        print(result['formatted_address'])
         this.locationResult = LocationResult()
           ..name = name
           ..locality = locality
