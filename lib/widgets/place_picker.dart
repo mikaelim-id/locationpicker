@@ -176,7 +176,7 @@ class PlacePickerState extends State<PlacePicker> {
 
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: appBarBox!.size.height * 2.1,
+        top: appBarBox!.size.height * 2,
         width: size?.width,
         child: Material(
           elevation: 1,
@@ -374,13 +374,15 @@ class PlacePickerState extends State<PlacePicker> {
       final result = responseJson['results'][0];
 
       setState(() {
-        late String name,
-            locality,
-            postalCode,
-            country,
-            administrativeAreaLevel1,
-            administrativeAreaLevel2,
-            city;
+        String name = '',
+            locality = '',
+            postalCode = '',
+            country = '',
+            administrativeAreaLevel1 = '',
+            administrativeAreaLevel2 = '',
+            city = '',
+            subLocalityLevel1 = '',
+            subLocalityLevel2 = '';
         bool isOnStreet = false;
         if (result['address_components'] is List<dynamic> &&
             result['address_components'].length != null &&
@@ -389,7 +391,9 @@ class PlacePickerState extends State<PlacePicker> {
             var tmp = result['address_components'][i];
             var types = tmp["types"] as List<dynamic>;
             var shortName = tmp['short_name'];
-
+            if (types == null) {
+              continue;
+            }
             if (i == 0) {
               // [street_number]
               name = shortName;
@@ -403,7 +407,11 @@ class PlacePickerState extends State<PlacePicker> {
                 name += ", $shortName";
               }
             } else {
-              if (types.contains("locality")) {
+              if (types.contains("sublocality_level_1")) {
+                subLocalityLevel1 = shortName;
+              } else if (types.contains("sublocality_level_2")) {
+                subLocalityLevel2 = shortName;
+              } else if (types.contains("locality")) {
                 locality = shortName;
               } else if (types.contains("administrative_area_level_2")) {
                 administrativeAreaLevel2 = shortName;
@@ -417,10 +425,8 @@ class PlacePickerState extends State<PlacePicker> {
             }
           }
         }
-        print(result);
-        print("result");
+        locality = locality != '' ? locality : administrativeAreaLevel1;
         city = locality;
-        print(result['formatted_address']);
         this.locationResult = LocationResult()
           ..name = name
           ..locality = locality
@@ -435,7 +441,11 @@ class PlacePickerState extends State<PlacePicker> {
           ..administrativeAreaLevel2 = AddressComponent(
               name: administrativeAreaLevel2,
               shortName: administrativeAreaLevel2)
-          ..city = AddressComponent(name: city, shortName: city);
+          ..city = AddressComponent(name: city, shortName: city)
+          ..subLocalityLevel1 = AddressComponent(
+              name: subLocalityLevel1, shortName: subLocalityLevel1)
+          ..subLocalityLevel2 = AddressComponent(
+              name: subLocalityLevel2, shortName: subLocalityLevel2);
       });
     } catch (e) {
       print(e);
