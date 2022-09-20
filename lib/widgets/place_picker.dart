@@ -262,7 +262,7 @@ class PlacePickerState extends State<PlacePicker> {
 
           suggestions.add(RichSuggestion(aci, () {
             FocusScope.of(context).requestFocus(FocusNode());
-            decodeAndSelectPlace(aci.id!);
+            decodeAndSelectPlace(aci.id);
           }));
         }
       }
@@ -380,9 +380,7 @@ class PlacePickerState extends State<PlacePicker> {
             country,
             administrativeAreaLevel1,
             administrativeAreaLevel2,
-            city,
-            subLocalityLevel1,
-            subLocalityLevel2;
+            city;
         bool isOnStreet = false;
         if (result['address_components'] is List<dynamic> &&
             result['address_components'].length != null &&
@@ -407,11 +405,7 @@ class PlacePickerState extends State<PlacePicker> {
                 name += ", $shortName";
               }
             } else {
-              if (types.contains("sublocality_level_1")) {
-                subLocalityLevel1 = shortName;
-              } else if (types.contains("sublocality_level_2")) {
-                subLocalityLevel2 = shortName;
-              } else if (types.contains("locality")) {
+              if (types.contains("locality")) {
                 locality = shortName;
               } else if (types.contains("administrative_area_level_2")) {
                 administrativeAreaLevel2 = shortName;
