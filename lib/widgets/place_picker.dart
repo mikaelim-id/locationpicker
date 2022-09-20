@@ -176,12 +176,12 @@ class PlacePickerState extends State<PlacePicker> {
 
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: 0,
+        top: 130,
         width: size?.width,
         child: Material(
           elevation: 1,
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             child: Row(
               children: <Widget>[
                 SizedBox(
@@ -317,7 +317,7 @@ class PlacePickerState extends State<PlacePicker> {
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: size?.width,
-        top: 145,
+        top: 130,
         child: Material(elevation: 1, child: Column(children: suggestions)),
       ),
     );
