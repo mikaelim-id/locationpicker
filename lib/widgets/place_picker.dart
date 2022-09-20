@@ -419,7 +419,7 @@ class PlacePickerState extends State<PlacePicker> {
         }
 
         city = locality;
-        print(result['formatted_address'])
+        print(result['formatted_address']);
         this.locationResult = LocationResult()
           ..name = name
           ..locality = locality
