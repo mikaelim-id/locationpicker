@@ -176,7 +176,7 @@ class PlacePickerState extends State<PlacePicker> {
 
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        top: MediaQuery.of(context).padding.top + 120,
+        top: MediaQuery.of(context).padding.top + 110,
         width: size?.width,
         child: Material(
           elevation: 1,
@@ -317,7 +317,7 @@ class PlacePickerState extends State<PlacePicker> {
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
         width: size?.width,
-        top: MediaQuery.of(context).padding.top + 120,
+        top: MediaQuery.of(context).padding.top + 110,
         child: Material(elevation: 1, child: Column(children: suggestions)),
       ),
     );
