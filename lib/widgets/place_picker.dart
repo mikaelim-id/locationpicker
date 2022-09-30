@@ -421,7 +421,7 @@ class PlacePickerState extends State<PlacePicker> {
       return widget.localizationItem!.unnamedLocation;
     }
 
-    return "${this.locationResult?.name}, ${this.locationResult?.locality}";
+    return "${this.locationResult?.name}";
   }
 
   /// Moves the marker to the indicated lat,lng
