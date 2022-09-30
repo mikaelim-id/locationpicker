@@ -297,8 +297,92 @@ class PlacePickerState extends State<PlacePicker> {
         throw Error();
       }
 
-      final location = responseJson['result']['geometry']['location'];
-      moveToLocation(LatLng(location['lat'], location['lng']));
+      final result = responseJson['result'];
+      final location = result['geometry']['location'];
+      final latLng = LatLng(location['lat'], location['lng']);
+      this.mapController.future.then((controller) {
+        controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+              CameraPosition(target: latLng, zoom: 15.0)),
+        );
+      });
+
+      setMarker(latLng);
+
+      setState(() {
+        String name = '',
+            locality = '',
+            postalCode = '',
+            country = '',
+            administrativeAreaLevel1 = '',
+            administrativeAreaLevel2 = '',
+            city = '',
+            subLocalityLevel1 = '',
+            subLocalityLevel2 = '';
+        bool isOnStreet = false;
+        if (result['address_components'] is List<dynamic> &&
+            result['address_components'].length != null &&
+            result['address_components'].length > 0) {
+          for (var i = 0; i < result['address_components'].length; i++) {
+            var tmp = result['address_components'][i];
+            var types = tmp["types"] as List<dynamic>;
+            var shortName = tmp['short_name'];
+            if (types == null) {
+              continue;
+            }
+            if (i == 0) {
+              // [street_number]
+              name = shortName;
+              isOnStreet = types.contains('street_number');
+              // other index 0 types
+              // [establishment, point_of_interest, subway_station, transit_station]
+              // [premise]
+              // [route]
+            } else if (i == 1 && isOnStreet) {
+              if (types.contains('route')) {
+                name += ", $shortName";
+              }
+            } else {
+              if (types.contains("sublocality_level_1")) {
+                subLocalityLevel1 = shortName;
+              } else if (types.contains("sublocality_level_2")) {
+                subLocalityLevel2 = shortName;
+              } else if (types.contains("locality")) {
+                locality = shortName;
+              } else if (types.contains("administrative_area_level_2")) {
+                administrativeAreaLevel2 = shortName;
+              } else if (types.contains("administrative_area_level_1")) {
+                administrativeAreaLevel1 = shortName;
+              } else if (types.contains("country")) {
+                country = shortName;
+              } else if (types.contains('postal_code')) {
+                postalCode = shortName;
+              }
+            }
+          }
+        }
+        locality = locality != '' ? locality : administrativeAreaLevel1;
+        city = locality;
+        this.locationResult = LocationResult()
+          ..name = name
+          ..locality = locality
+          ..latLng = latLng
+          ..formattedAddress = result['formatted_address']
+          ..placeId = result['place_id']
+          ..postalCode = postalCode
+          ..country = AddressComponent(name: country, shortName: country)
+          ..administrativeAreaLevel1 = AddressComponent(
+              name: administrativeAreaLevel1,
+              shortName: administrativeAreaLevel1)
+          ..administrativeAreaLevel2 = AddressComponent(
+              name: administrativeAreaLevel2,
+              shortName: administrativeAreaLevel2)
+          ..city = AddressComponent(name: city, shortName: city)
+          ..subLocalityLevel1 = AddressComponent(
+              name: subLocalityLevel1, shortName: subLocalityLevel1)
+          ..subLocalityLevel2 = AddressComponent(
+              name: subLocalityLevel2, shortName: subLocalityLevel2);
+      });
     } catch (e) {
       print(e);
     }
