@@ -262,6 +262,9 @@ class PlacePickerState extends State<PlacePicker> {
 
           suggestions.add(RichSuggestion(aci, () {
             FocusScope.of(context).requestFocus(FocusNode());
+            print('adsadsa');
+            print(aci.id);
+            print(aci.text);
             decodeAndSelectPlace(aci.id);
           }));
         }
