@@ -364,7 +364,7 @@ class PlacePickerState extends State<PlacePicker> {
         locality = locality != '' ? locality : administrativeAreaLevel1;
         city = locality;
         this.locationResult = LocationResult()
-          ..name = place.id
+          ..name = place.text
           ..locality = locality
           ..latLng = latLng
           ..formattedAddress = result['formatted_address']
