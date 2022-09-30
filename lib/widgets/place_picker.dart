@@ -262,10 +262,7 @@ class PlacePickerState extends State<PlacePicker> {
 
           suggestions.add(RichSuggestion(aci, () {
             FocusScope.of(context).requestFocus(FocusNode());
-            print('adsadsa');
-            print(aci.id);
-            print(aci.text);
-            decodeAndSelectPlace(aci.id);
+            decodeAndSelectPlace(aci);
           }));
         }
       }
@@ -279,14 +276,14 @@ class PlacePickerState extends State<PlacePicker> {
   /// To navigate to the selected place from the autocomplete list to the map,
   /// the lat,lng is required. This method fetches the lat,lng of the place and
   /// proceeds to moving the map to that location.
-  void decodeAndSelectPlace(String placeId) async {
+  void decodeAndSelectPlace(AutoCompleteItem place) async {
     clearOverlay();
 
     try {
       final url = Uri.parse(
           "https://maps.googleapis.com/maps/api/place/details/json?key=${widget.apiKey}&" +
               "language=${widget.localizationItem?.languageCode}&" +
-              "placeid=$placeId");
+              "placeid=${place.id}");
 
       final response = await http.get(url);
 
@@ -367,7 +364,7 @@ class PlacePickerState extends State<PlacePicker> {
         locality = locality != '' ? locality : administrativeAreaLevel1;
         city = locality;
         this.locationResult = LocationResult()
-          ..name = name
+          ..name = place.id
           ..locality = locality
           ..latLng = latLng
           ..formattedAddress = result['formatted_address']
