@@ -115,7 +115,7 @@ Also add these to the dict values in `Info.plist` for location request to work o
 Import the package into your code
 
 ```dart
-import 'package:place_picker/place_picker.dart';
+import 'package:locationpicker/place_picker.dart';
 ```
 
 Create a method like below, and call it in `onTap` of a button or InkWell. A `LocationResult` will be returned

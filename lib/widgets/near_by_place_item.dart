@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:place_picker/entities/entities.dart';
+import 'package:locationpicker/entities/entities.dart';
 
 class NearbyPlaceItem extends StatelessWidget {
   final NearbyPlace nearbyPlace;

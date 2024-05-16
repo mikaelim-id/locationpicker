@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:place_picker/place_picker.dart';
+import 'package:locationpicker/place_picker.dart';
 
 class PickerDemo extends StatefulWidget {
   @override
