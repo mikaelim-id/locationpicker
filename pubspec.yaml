@@ -10,8 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.1.0
-  google_maps_flutter: ^2.6.1
-  location: ^6.0.1
+  google_maps_flutter: ^2.7.0
+  location: ^7.0.0
 
 dev_dependencies:
   flutter_test:
