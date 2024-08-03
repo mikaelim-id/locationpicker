@@ -154,10 +154,6 @@ class PlacePickerState extends State<PlacePicker> {
 
     previousSearchTerm = place;
 
-    if (context == null) {
-      return;
-    }
-
     clearOverlay();
 
     setState(() {
@@ -170,9 +166,6 @@ class PlacePickerState extends State<PlacePicker> {
 
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     final size = renderBox?.size;
-
-    final RenderBox? appBarBox =
-        this.appBarKey.currentContext!.findRenderObject() as RenderBox?;
 
     this.overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -200,7 +193,7 @@ class PlacePickerState extends State<PlacePicker> {
     );
 
     if (this.overlayEntry != null) {
-      Overlay.of(context)?.insert(this.overlayEntry!);
+      Overlay.of(context).insert(this.overlayEntry!);
     }
 
     autoCompleteSearch(place);
@@ -327,9 +320,6 @@ class PlacePickerState extends State<PlacePicker> {
             var tmp = result['address_components'][i];
             var types = tmp["types"] as List<dynamic>;
             var shortName = tmp['short_name'];
-            if (types == null) {
-              continue;
-            }
             if (i == 0) {
               // [street_number]
               name = shortName;
@@ -393,9 +383,6 @@ class PlacePickerState extends State<PlacePicker> {
     final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
     Size? size = renderBox?.size;
 
-    final RenderBox? appBarBox =
-        this.appBarKey.currentContext?.findRenderObject() as RenderBox?;
-
     clearOverlay();
 
     this.overlayEntry = OverlayEntry(
@@ -407,7 +394,7 @@ class PlacePickerState extends State<PlacePicker> {
     );
 
     if (this.overlayEntry != null) {
-      Overlay.of(context)?.insert(this.overlayEntry!);
+      Overlay.of(context).insert(this.overlayEntry!);
     }
   }
 
@@ -481,9 +468,6 @@ class PlacePickerState extends State<PlacePicker> {
             var tmp = result['address_components'][i];
             var types = tmp["types"] as List<dynamic>;
             var shortName = tmp['short_name'];
-            if (types == null) {
-              continue;
-            }
             if (i == 0) {
               // [street_number]
               name = shortName;
