@@ -116,10 +116,10 @@ packages:
     dependency: transitive
     description:
       name: google_maps_flutter_platform_interface
-      sha256: "4f6930fd668bf5d40feb2695d5695dbc0c35e5542b557a34ad35be491686d2ba"
+      sha256: "099874463dc4c9bff04fe4b2b8cf7284d2455c2deead8f9a59a87e1b9f028c69"
       url: "https://pub.dev"
     source: hosted
-    version: "2.9.0"
+    version: "2.9.2"
   google_maps_flutter_web:
     dependency: transitive
     description:
@@ -187,10 +187,11 @@ packages:
   location:
     dependency: "direct main"
     description:
-      name: location
-      sha256: "6463a242973bf247e3fb1c7722919521b98026978ee3b5177202e103a39c145e"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/location"
+      ref: "1cc9cae16b9a58de74ffaf8113cb86e247d25739"
+      resolved-ref: "1cc9cae16b9a58de74ffaf8113cb86e247d25739"
+      url: "https://github.com/Juggler98/flutterlocation"
+    source: git
     version: "7.0.0"
   location_platform_interface:
     dependency: transitive
@@ -203,11 +204,12 @@ packages:
   location_web:
     dependency: transitive
     description:
-      name: location_web
-      sha256: "613597b489beb396f658c6f4358dd383c5ed0a1402d95e287642a5f2d8171cb0"
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.0.3"
+      path: "packages/location_web"
+      ref: "1cc9cae16b9a58de74ffaf8113cb86e247d25739"
+      resolved-ref: "1cc9cae16b9a58de74ffaf8113cb86e247d25739"
+      url: "https://github.com/Juggler98/flutterlocation"
+    source: git
+    version: "5.0.4"
   matcher:
     dependency: transitive
     description:
@@ -345,10 +347,10 @@ packages:
     dependency: transitive
     description:
       name: web
-      sha256: "97da13628db363c635202ad97068d47c5b8aa555808e7a9411963c533b449b27"
+      sha256: cd3543bd5798f6ad290ea73d210f423502e71900302dde696f8bff84bf89a1cb
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.1"
+    version: "1.1.0"
 sdks:
   dart: ">=3.4.0 <4.0.0"
   flutter: ">=3.22.0"
