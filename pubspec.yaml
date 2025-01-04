@@ -10,14 +10,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  location:
-    git:
-      url: https://github.com/Juggler98/flutterlocation
-      path: packages/location
-      ref: 1cc9cae16b9a58de74ffaf8113cb86e247d25739
+  location: ^7.0.1
 
   http: ^1.2.2
   google_maps_flutter: ^2.9.0
+
+dependency_overrides:
+  web: ^1.0.0
 
 dev_dependencies:
   flutter_test:
