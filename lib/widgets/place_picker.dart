@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -27,6 +28,7 @@ class PlacePicker extends StatefulWidget {
   /// API key generated from Google Cloud Console. You can get an API key
   /// [here](https://cloud.google.com/maps-platform/)
   final String apiKey;
+  String? hostUrl;
 
   /// Location to be displayed when screen is showed. If this is set or not null, the
   /// map does not pan to the user's current location.
@@ -34,10 +36,18 @@ class PlacePicker extends StatefulWidget {
   LocalizationItem? localizationItem;
   final List<String>? countries;
 
-  PlacePicker(this.apiKey,
-      {this.displayLocation, this.localizationItem, this.countries}) {
+  PlacePicker(
+    this.apiKey, {
+    this.hostUrl,
+    this.displayLocation,
+    this.localizationItem,
+    this.countries,
+  }) {
     if (this.localizationItem == null) {
       this.localizationItem = new LocalizationItem();
+    }
+    if (!kIsWeb || this.hostUrl == null) {
+      this.hostUrl = 'maps.googleapis.com';
     }
   }
 
@@ -212,7 +222,7 @@ class PlacePickerState extends State<PlacePicker> {
           : "";
 
       var endpoint =
-          "https://maps.googleapis.com/maps/api/place/autocomplete/json?"
+          "https://${widget.hostUrl}/maps/api/place/autocomplete/json?"
           "key=${widget.apiKey}&"
           "language=${widget.localizationItem?.languageCode}&"
           "input={$place}$regionParam&sessiontoken=${this.sessionToken}";
@@ -274,7 +284,7 @@ class PlacePickerState extends State<PlacePicker> {
 
     try {
       final url = Uri.parse(
-          "https://maps.googleapis.com/maps/api/place/details/json?key=${widget.apiKey}&" +
+          "https://${widget.hostUrl}/maps/api/place/details/json?key=${widget.apiKey}&" +
               "language=${widget.localizationItem?.languageCode}&" +
               "placeid=${place.id}");
 
@@ -431,7 +441,7 @@ class PlacePickerState extends State<PlacePicker> {
   /// to be the road name and the locality.
   void reverseGeocodeLatLng(LatLng latLng) async {
     try {
-      final url = Uri.parse("https://maps.googleapis.com/maps/api/geocode/json?"
+      final url = Uri.parse("https://${widget.hostUrl}/maps/api/geocode/json?"
           "latlng=${latLng.latitude},${latLng.longitude}&"
           "language=${widget.localizationItem?.languageCode}&"
           "key=${widget.apiKey}");
