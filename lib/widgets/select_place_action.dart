@@ -135,6 +135,18 @@ class SelectPlaceAction extends StatelessWidget {
                     constraints: const BoxConstraints(minHeight: 44),
                     child: AnimatedSwitcher(
                       duration: Duration(milliseconds: reduceMotion ? 0 : 160),
+                      // Keep the caption/address block left-aligned. The inner
+                      // Column shrink-wraps, and AnimatedSwitcher's default
+                      // layout centres its children, which would centre a short
+                      // location name in the card. Override with a start-aligned
+                      // Stack (same as the default layout, but centerStart).
+                      layoutBuilder: (currentChild, previousChildren) => Stack(
+                        alignment: AlignmentDirectional.centerStart,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      ),
                       child: isLoading
                           ? Semantics(
                               key: const ValueKey('loading'),

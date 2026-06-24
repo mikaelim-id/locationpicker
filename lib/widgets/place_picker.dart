@@ -279,7 +279,23 @@ class PlacePickerState extends State<PlacePicker>
   // ---------------------------------------------------------------------------
 
   void _openSearch() {
-    if (!_searchActive) setState(() => _searchActive = true);
+    final wasActive = _searchActive;
+    if (!wasActive) setState(() => _searchActive = true);
+    // Only on the first open: tapping the field leaks a tap through to the
+    // GoogleMap platform view beneath it (the same Android hybrid-composition
+    // touch leak documented on [suppressMapTap]). That leaked GoogleMap.onTap
+    // fires just after this, sees the search as active and runs _closeSearch()
+    // -> unfocus(), dismissing the keyboard before the user can type. Swallow
+    // that one leaked tap so the field keeps focus. Re-arming on every tap
+    // (e.g. re-focusing an already-open field) would keep resetting the 500ms
+    // safety window and could later swallow a deliberate map tap.
+    if (!wasActive) {
+      suppressMapTap = true;
+      _armTapSuppressionSafety();
+    }
+    // Belt-and-suspenders: focus explicitly. TextField's implicit tap-to-focus
+    // is unreliable when an overlay sits above a platform view.
+    if (!_searchFocus.hasFocus) _searchFocus.requestFocus();
   }
 
   void _closeSearch() {
