@@ -858,6 +858,7 @@ class PlacePickerState extends State<PlacePicker>
       ),
     );
   }
+}
 
 /// Approximate great-circle distance in meters (equirectangular projection),
 /// good enough for the small-move geocode guard.
@@ -979,48 +980,6 @@ class _CircleButtonState extends State<_CircleButton> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Static placeholder row shown while autocomplete results load.
-class _SkeletonRow extends StatelessWidget {
-  final bool isLast;
-  const _SkeletonRow({required this.isLast});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final block = cs.onSurface.withValues(alpha: 0.08);
-    Widget bar(double w, double h) => Container(
-          width: w,
-          height: h,
-          decoration: BoxDecoration(
-              color: block, borderRadius: BorderRadius.circular(6)),
-        );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-                color: block, borderRadius: BorderRadius.circular(12)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                bar(160, 13),
-                const SizedBox(height: 8),
-                bar(100, 11),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

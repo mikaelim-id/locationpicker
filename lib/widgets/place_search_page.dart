@@ -34,14 +34,14 @@ class PlaceSearchPage extends StatefulWidget {
   final LatLng? locationBias;
 
   const PlaceSearchPage({
-    super.key,
+    Key? key,
     required this.apiKey,
     required this.hostUrl,
     required this.sessionToken,
     required this.localizationItem,
     this.countries,
     this.locationBias,
-  });
+  }) : super(key: key);
 
   @override
   State<PlaceSearchPage> createState() => _PlaceSearchPageState();
@@ -94,7 +94,7 @@ class _PlaceSearchPageState extends State<PlaceSearchPage> {
       var endpoint = "https://${widget.hostUrl}/maps/api/place/autocomplete/json?"
           "key=${widget.apiKey}&"
           "language=${widget.localizationItem.languageCode}&"
-          "input={$query}$regionParam&sessiontoken=${widget.sessionToken}";
+          "input=$query$regionParam&sessiontoken=${widget.sessionToken}";
 
       final bias = widget.locationBias;
       if (bias != null) {
