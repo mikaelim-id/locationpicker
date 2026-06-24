@@ -898,9 +898,15 @@ class PlacePickerState extends State<PlacePicker>
                 ),
               ),
 
-            // 5. Scrim while searching
+            // 5. Scrim while searching. Keyed so that inserting it into the
+            // Stack does not shift the (also keyed) search layer's position:
+            // without keys, this Positioned would reconcile against the search
+            // Positioned, recreating the TextField subtree and dropping its
+            // focus the instant the first tap lands — the "needs two taps to
+            // type" bug.
             if (_searchActive)
               Positioned.fill(
+                key: const ValueKey('search-scrim'),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _closeSearch,
@@ -912,7 +918,10 @@ class PlacePickerState extends State<PlacePicker>
 
             // 6. Search pill + results panel (always on top). The pill is inset
             // to clear the close button; the panel below stays full width.
+            // Keyed so it is preserved (not rebuilt) when the scrim above is
+            // inserted/removed — see the scrim's note.
             Positioned(
+              key: const ValueKey('search-layer'),
               top: media.padding.top + 8,
               left: 16 + padL,
               right: 16 + padR,
