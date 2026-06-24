@@ -77,6 +77,18 @@ class PlacePickerState extends State<PlacePicker> {
 
   String previousSearchTerm = '';
 
+  /// When a search suggestion is tapped, the GoogleMap platform view beneath
+  /// the autocomplete overlay also receives the same tap and fires
+  /// [GoogleMap.onTap] (a known Android texture-layer hybrid-composition touch
+  /// leak). That leaked tap would reverse-geocode the tapped coordinate and
+  /// overwrite the place the user actually selected, panning the map away.
+  /// The leaked tap is delivered asynchronously via the platform channel, so it
+  /// always arrives just after the synchronous suggestion tap — this flag lets
+  /// us swallow exactly that one tap. It is cleared the moment the leaked tap is
+  /// consumed, and on a short timer as a safety net so it can never eat a later,
+  /// deliberate map tap on platforms where no leak occurs (e.g. iOS).
+  bool suppressMapTap = false;
+
   // constructor
   PlacePickerState();
 
@@ -128,6 +140,13 @@ class PlacePickerState extends State<PlacePicker> {
               myLocationEnabled: true,
               onMapCreated: onMapCreated,
               onTap: (latLng) {
+                // Swallow the tap that leaks through from selecting a search
+                // suggestion (see [suppressMapTap]); otherwise the map would
+                // jump to the tapped point instead of the chosen result.
+                if (suppressMapTap) {
+                  suppressMapTap = false;
+                  return;
+                }
                 clearOverlay();
                 moveToLocation(latLng);
               },
@@ -264,6 +283,11 @@ class PlacePickerState extends State<PlacePicker> {
             ..length = t['matched_substrings'][0]['length'];
 
           suggestions.add(RichSuggestion(aci, () {
+            // Block the map's leaked onTap for this selection. Reset shortly
+            // after as a safety net for platforms that don't leak.
+            suppressMapTap = true;
+            Future.delayed(const Duration(milliseconds: 500),
+                () => suppressMapTap = false);
             FocusScope.of(context).requestFocus(FocusNode());
             decodeAndSelectPlace(aci);
           }));
