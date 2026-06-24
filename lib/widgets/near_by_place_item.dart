@@ -18,7 +18,9 @@ class NearbyPlaceItem extends StatelessWidget {
             children: <Widget>[
               Image.network(nearbyPlace.icon, width: 16),
               SizedBox(width: 24),
-              Expanded(child: Text("${nearbyPlace.name}", style: TextStyle(fontSize: 16)))
+              Expanded(
+                  child: Text("${nearbyPlace.name}",
+                      style: TextStyle(fontSize: 16)))
             ],
           ),
         ),

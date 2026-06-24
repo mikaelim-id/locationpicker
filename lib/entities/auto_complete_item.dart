@@ -13,4 +13,9 @@ class AutoCompleteItem {
 
   /// Length of matched part of the [text]
   late int length;
+
+  /// Place types reported by the Places API (e.g. `route`, `locality`,
+  /// `establishment`). Optional; used to pick a representative leading icon
+  /// in the suggestions list. Older callers that never set this keep working.
+  List<String>? types;
 }

@@ -1,3 +1,21 @@
+## [0.11.0] - 24 Jun 2026
+Complete UI/UX redesign — fully backward compatible.
+
+- Fixed center-pin interaction: pan the map under a custom-painted pin that
+  lifts on drag and resolves the address on camera idle (debounced, with a
+  small-move skip and stale-response guards). Tap-to-place is retained.
+- Floating glass search pill opening an in-tree results panel (replaces the old
+  overlay) with place-type icons, two-line rows and highlighted matches.
+- Persistent bottom card with a full address, a clear Confirm button, loading
+  shimmer and inline retry on geocode failure.
+- Themed my-location button, dark Google Map style at night, adaptive status
+  bar, reduce-motion support, larger tap targets and screen-reader announcements.
+- New optional `LocalizationItem` strings and optional `mapStyleDark` /
+  `mapStyleLight` parameters. Public API and `LocationResult` unchanged.
+
+## [0.10.0]
+Added `hostUrl` option and map tap suppression fix.
+
 ## [0.9.18] - 2 Nov 2020
 Upgraded http package
 

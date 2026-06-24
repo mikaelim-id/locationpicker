@@ -1,11 +1,25 @@
 # Flutter Place Picker [![Pub](https://img.shields.io/pub/v/place_picker.svg)](https://pub.dev/packages/place_picker)
 
-The missing location picker made in Flutter for Flutter. With dark theme and custom localization support.
+The missing location picker made in Flutter for Flutter. A modern, ride-hailing
+style picker with full light/dark theming and custom localization support.
 
-<p float="left">
-  <img src="https://i.ibb.co/yyQRzPx/dark.jpg" width=400 />
-  <img src="https://i.ibb.co/Ry7396K/sc2.png" width=400 />
-</p>
+### What's new in the redesign
+
+A ground-up UI/UX revamp — every existing capability and the public API are
+preserved:
+
+- **Fixed center pin** — pan the map under a custom-painted pin that lifts on
+  drag and settles with a success pulse; the address resolves automatically when
+  the map comes to rest (debounced, with stale-response guards). Tapping the map
+  still works as a secondary way to drop the pin.
+- **Floating search** — a glass search pill that opens an in-tree results panel
+  with place-type icons, two-line rows and highlighted matches.
+- **Persistent confirm card** — shows the selected name + full address with a
+  clear primary **Confirm** button, shimmer while resolving, and an inline retry
+  on failure.
+- **Polished chrome** — themed my-location button, a dark Google Map style at
+  night, status-bar adaptation, reduce-motion support, large tap targets and
+  screen-reader announcements.
 
 ⚠️ Please note: This library will <b>NOT</b> be affected by the deprecation of Place Picker as [indicated here](https://developers.google.com/places/android-sdk/placepicker).
 
@@ -118,20 +132,29 @@ Import the package into your code
 import 'package:locationpicker/place_picker.dart';
 ```
 
-Create a method like below, and call it in `onTap` of a button or InkWell. A `LocationResult` will be returned
-with the name and lat/lng of the selected place. You can then handle the result in any way you want.
-Pass in an optional `LatLng displayLocation` to display that location instead. This is useful when you want the map
-to display the previously selected location.
+Create a method like below, and call it in `onTap` of a button or InkWell. A `LocationResult` is returned
+when the user confirms a place (or `null` if they back out), carrying the name, full address and lat/lng of the
+selected place. Pass an optional `LatLng displayLocation` to start the map at a specific location — useful when
+showing a previously selected place.
 
 ```dart
 void showPlacePicker() async {
-    LocationResult result = await Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) =>
-            PlacePicker("YOUR API KEY",
-                        displayLocation: customLocation,
-                        )));
+    final LocationResult? result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PlacePicker(
+          "YOUR_API_KEY",
+          displayLocation: customLocation, // optional
+        ),
+      ),
+    );
 
-    // Handle the result in your way
-    print(result);
+    if (result != null) {
+      // Handle the result in your way
+      print('${result.name} — ${result.formattedAddress}');
+    }
 }
 ```
+
+All on-screen text is customizable for localization via the optional `localizationItem` argument
+(`searchHint`, `confirmLocation`, `selectedLocationLabel`, `moveMapHint`, and the rest). Results can be
+restricted to up to five countries with `countries: ['us', 'ca']`.
