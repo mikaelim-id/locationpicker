@@ -1,8 +1,8 @@
 ## [0.11.0] - 24 Jun 2026
 Complete UI/UX redesign — fully backward compatible.
 
-- Fixed center-pin interaction: pan the map under a custom-painted pin that
-  lifts on drag and resolves the address on camera idle (debounced, with a
+- Fixed center-pin interaction: pan the map under a single map pin that lifts
+  while dragging and resolves the address on camera idle (debounced, with a
   small-move skip and stale-response guards). Tap-to-place is retained.
 - Floating glass search pill opening an in-tree results panel (replaces the old
   overlay) with place-type icons, two-line rows and highlighted matches.

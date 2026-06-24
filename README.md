@@ -8,10 +8,10 @@ style picker with full light/dark theming and custom localization support.
 A ground-up UI/UX revamp — every existing capability and the public API are
 preserved:
 
-- **Fixed center pin** — pan the map under a custom-painted pin that lifts on
-  drag and settles with a success pulse; the address resolves automatically when
-  the map comes to rest (debounced, with stale-response guards). Tapping the map
-  still works as a secondary way to drop the pin.
+- **Fixed center pin** — pan the map under a single map pin that lifts while
+  dragging; the address resolves automatically when the map comes to rest
+  (debounced, with stale-response guards). Tapping the map still works as a
+  secondary way to drop the pin.
 - **Floating search** — a glass search pill that opens an in-tree results panel
   with place-type icons, two-line rows and highlighted matches.
 - **Persistent confirm card** — shows the selected name + full address with a

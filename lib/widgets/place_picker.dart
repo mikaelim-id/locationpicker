@@ -17,6 +17,9 @@ import '../uuid.dart';
 /// Default camera target used until a real location is resolved.
 const LatLng _kDefaultCenter = LatLng(5.6037, 0.1870);
 
+/// Size of the circular back button; the search pill matches this height.
+const double _kControlSize = 48.0;
+
 /// The visible lifecycle of the bottom selection card.
 enum _CardState { initial, dragging, resolving, resolved, error }
 
@@ -79,9 +82,6 @@ class PlacePicker extends StatefulWidget {
 class PlacePickerState extends State<PlacePicker>
     with TickerProviderStateMixin {
   final Completer<GoogleMapController> mapController = Completer();
-
-  /// Indicator for the selected location (used by the tap/search paths).
-  final Set<Marker> markers = {};
 
   /// Result returned after user completes selection.
   LocationResult? locationResult;
@@ -148,13 +148,9 @@ class PlacePickerState extends State<PlacePicker>
 
   bool _locating = false;
 
-  // --- Pin animation ---
+  // --- Pin animation (lift while dragging) ---
   late final AnimationController _pinController =
       AnimationController.unbounded(vsync: this, value: 0);
-  late final AnimationController _pulseController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 420),
-  );
 
   PlacePickerState();
 
@@ -162,10 +158,6 @@ class PlacePickerState extends State<PlacePicker>
   void initState() {
     super.initState();
     _lastCameraTarget = widget.displayLocation;
-    markers.add(Marker(
-      position: widget.displayLocation ?? _kDefaultCenter,
-      markerId: const MarkerId('selected-location'),
-    ));
   }
 
   @override
@@ -181,7 +173,6 @@ class PlacePickerState extends State<PlacePicker>
     _idleSuppressionSafety?.cancel();
     _idleDebounce?.cancel();
     _pinController.dispose();
-    _pulseController.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -281,11 +272,6 @@ class PlacePickerState extends State<PlacePicker>
     _pinController.animateTo(0.0,
         duration: _anim(const Duration(milliseconds: 240)),
         curve: Curves.easeOutBack);
-  }
-
-  void _pulsePin() {
-    if (MediaQuery.of(context).disableAnimations) return;
-    _pulseController.forward(from: 0);
   }
 
   // ---------------------------------------------------------------------------
@@ -465,8 +451,6 @@ class PlacePickerState extends State<PlacePicker>
             CameraPosition(target: latLng, zoom: 15.0)));
       });
 
-      setMarker(latLng);
-
       setState(() {
         String locality = '',
             postalCode = '',
@@ -523,7 +507,6 @@ class PlacePickerState extends State<PlacePicker>
         _cardState = _CardState.resolved;
       });
       _lastFailedSelect = null;
-      _pulsePin();
       HapticFeedback.selectionClick();
     } catch (e) {
       debugPrint('decodeAndSelectPlace error: $e');
@@ -575,14 +558,6 @@ class PlacePickerState extends State<PlacePicker>
     if (name.isEmpty) return widget.localizationItem.unnamedLocation;
     if (locality.isEmpty || name.contains(locality)) return name;
     return '$name, $locality';
-  }
-
-  void setMarker(LatLng latLng) {
-    setState(() {
-      markers.clear();
-      markers.add(Marker(
-          markerId: const MarkerId('selected-location'), position: latLng));
-    });
   }
 
   /// Reverse geocodes [latLng] into a full [LocationResult].
@@ -689,7 +664,6 @@ class PlacePickerState extends State<PlacePicker>
         _lastResolvedTarget = latLng;
         _cardState = _CardState.resolved;
       });
-      _pulsePin();
       HapticFeedback.selectionClick();
     } catch (e) {
       debugPrint('reverseGeocodeLatLng error: $e');
@@ -711,7 +685,6 @@ class PlacePickerState extends State<PlacePicker>
       controller.animateCamera(CameraUpdate.newCameraPosition(
           CameraPosition(target: latLng, zoom: 15.0)));
     });
-    setMarker(latLng);
     reverseGeocodeLatLng(latLng);
   }
 
@@ -796,7 +769,6 @@ class PlacePickerState extends State<PlacePicker>
     // Respect horizontal safe-area insets (notch / curved edge in landscape).
     final padL = media.padding.left;
     final padR = media.padding.right;
-    const closeButtonSize = 48.0;
 
     final sheetSurface = isDark
         ? Color.alphaBlend(cs.onSurface.withValues(alpha: 0.05), cs.surface)
@@ -834,7 +806,6 @@ class PlacePickerState extends State<PlacePicker>
                 onCameraMoveStarted: _onCameraMoveStarted,
                 onCameraMove: _onCameraMove,
                 onCameraIdle: _onCameraIdle,
-                markers: markers,
                 style:
                     (mapStyle != null && mapStyle.isNotEmpty) ? mapStyle : null,
               ),
@@ -904,7 +875,7 @@ class PlacePickerState extends State<PlacePicker>
                 top: media.padding.top + 8,
                 left: 16 + padL,
                 child: _CircleButton(
-                  size: closeButtonSize,
+                  size: _kControlSize,
                   semanticLabel: 'Go back',
                   onTap: () => Navigator.of(context).maybePop(),
                   child: Icon(Icons.arrow_back, color: cs.onSurface, size: 22),
@@ -935,7 +906,7 @@ class PlacePickerState extends State<PlacePicker>
                 children: [
                   Padding(
                     padding:
-                        EdgeInsets.only(left: canPop ? closeButtonSize + 8 : 0),
+                        EdgeInsets.only(left: canPop ? _kControlSize + 8 : 0),
                     child: _buildSearchPill(cs, isDark, sheetSurface, loc),
                   ),
                   if (_searchActive) ...[
@@ -966,32 +937,33 @@ class PlacePickerState extends State<PlacePicker>
   }
 
   Widget _buildPin(ColorScheme cs, bool isDark) {
-    final ringColor = isDark
-        ? Color.alphaBlend(cs.onSurface.withValues(alpha: 0.06), cs.surface)
-        : cs.surface;
+    const pinSize = 44.0;
     return Positioned.fill(
       child: IgnorePointer(
         child: Center(
-          child: Transform.translate(
-            offset: const Offset(0, -32),
+          child: AnimatedBuilder(
+            animation: _pinController,
+            builder: (context, child) {
+              final lift = _pinController.value.clamp(0.0, 1.4);
+              return Transform.translate(
+                // Anchor the pin's tip to the map centre; lift while dragging.
+                offset: Offset(0, -pinSize / 2 - lift * 8),
+                child: child,
+              );
+            },
             child: Semantics(
               label: 'Selected location pin, centered on the map',
-              child: AnimatedBuilder(
-                animation: Listenable.merge([_pinController, _pulseController]),
-                builder: (context, _) {
-                  return CustomPaint(
-                    size: const Size(46, 64),
-                    painter: _PinPainter(
-                      lift: _pinController.value,
-                      pulse: _pulseController.value,
-                      color: cs.primary,
-                      ring: ringColor,
-                      dot: _onPrimarySafe(cs),
-                      shadowColor: Colors.black,
-                      shadowOpacity: isDark ? 0.45 : 0.22,
-                    ),
-                  );
-                },
+              child: Icon(
+                Icons.location_on,
+                size: pinSize,
+                color: cs.primary,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1003,6 +975,8 @@ class PlacePickerState extends State<PlacePicker>
   Widget _buildSearchPill(
       ColorScheme cs, bool isDark, Color surface, LocalizationItem loc) {
     return Container(
+      // Match the height of the circular back button.
+      constraints: const BoxConstraints(minHeight: _kControlSize),
       decoration: BoxDecoration(
         color: surface,
         borderRadius: BorderRadius.circular(14),
@@ -1018,7 +992,7 @@ class PlacePickerState extends State<PlacePicker>
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: SearchInput(
           searchPlace,
           bare: true,
@@ -1146,13 +1120,6 @@ class PlacePickerState extends State<PlacePicker>
   }
 }
 
-/// Returns a label color guaranteed to contrast [ColorScheme.primary], even on
-/// adversarial host palettes.
-Color _onPrimarySafe(ColorScheme cs) =>
-    ThemeData.estimateBrightnessForColor(cs.primary) == Brightness.dark
-        ? Colors.white
-        : Colors.black;
-
 /// Approximate great-circle distance in meters (equirectangular projection),
 /// good enough for the small-move geocode guard.
 double _distanceMeters(LatLng a, LatLng b) {
@@ -1275,98 +1242,6 @@ class _SkeletonRow extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Paints the fixed center pin: a teardrop with an animated ground shadow and a
-/// one-shot success ring pulse. The tip anchors to the bottom-center of the
-/// canvas, which the layout aligns to the map's geometric center.
-class _PinPainter extends CustomPainter {
-  final double lift; // 0 = resting, 1 = lifted (may overshoot)
-  final double pulse; // 0..1 success pulse progress
-  final Color color;
-  final Color ring;
-  final Color dot;
-  final Color shadowColor;
-  final double shadowOpacity;
-
-  _PinPainter({
-    required this.lift,
-    required this.pulse,
-    required this.color,
-    required this.ring,
-    required this.dot,
-    required this.shadowColor,
-    required this.shadowOpacity,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final groundY = size.height; // the geocoded point
-    final l = lift.clamp(0.0, 1.0);
-    final liftPx = lift.clamp(-0.4, 1.4) * 8;
-
-    // Ground shadow (stays at the anchor; shrinks & fades while lifted).
-    final shadowPaint = Paint()
-      ..color = shadowColor.withValues(alpha: shadowOpacity * (1 - 0.5 * l))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(cx, groundY - 1),
-        width: 22 * (1 - 0.38 * l),
-        height: 6 * (1 - 0.25 * l),
-      ),
-      shadowPaint,
-    );
-
-    // Success pulse ring.
-    if (pulse > 0 && pulse < 1) {
-      canvas.drawCircle(
-        Offset(cx, groundY - 2),
-        8 + 22 * pulse,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = color.withValues(alpha: 0.35 * (1 - pulse)),
-      );
-    }
-
-    // Pin body (lifts as a whole).
-    canvas.save();
-    canvas.translate(0, -liftPx);
-
-    const r = 13.0;
-    final headCenter = Offset(cx, r + 3);
-    final tip = Offset(cx, groundY - 3);
-
-    final path = Path()
-      ..addOval(Rect.fromCircle(center: headCenter, radius: r))
-      ..moveTo(cx - r * 0.62, headCenter.dy + r * 0.55)
-      ..lineTo(cx + r * 0.62, headCenter.dy + r * 0.55)
-      ..lineTo(tip.dx, tip.dy)
-      ..close();
-
-    canvas.drawPath(path, Paint()..color = color);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeJoin = StrokeJoin.round
-        ..color = ring,
-    );
-    canvas.drawCircle(headCenter, 4.5, Paint()..color = dot);
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_PinPainter old) =>
-      old.lift != lift ||
-      old.pulse != pulse ||
-      old.color != color ||
-      old.ring != ring ||
-      old.dot != dot;
 }
 
 /// A compact dark Google Maps style applied automatically in dark mode.
