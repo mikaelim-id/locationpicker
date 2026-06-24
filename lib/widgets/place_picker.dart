@@ -89,16 +89,14 @@ class PlacePickerState extends State<PlacePicker>
   /// Session token required for autocomplete API call.
   String sessionToken = Uuid().generateV4();
 
-  String previousSearchTerm = '';
-
-  /// When a search suggestion is tapped, the GoogleMap platform view beneath
-  /// the autocomplete panel can also receive the same tap and fire
-  /// [GoogleMap.onTap] (a known Android texture-layer hybrid-composition touch
-  /// leak). That leaked tap would reverse-geocode the tapped coordinate and
-  /// overwrite the place the user actually selected, panning the map away.
-  /// The leaked tap is delivered asynchronously via the platform channel, so it
-  /// always arrives just after the synchronous suggestion tap — this flag lets
-  /// us swallow exactly that one tap. It is cleared the moment the leaked tap is
+  /// When the search pill is tapped, the GoogleMap platform view beneath it can
+  /// also receive the same tap and fire [GoogleMap.onTap] (a known Android
+  /// texture-layer hybrid-composition touch leak). That leaked tap would
+  /// reverse-geocode the tapped coordinate and drop a pin there as the user is
+  /// merely opening search, panning the map away from where they were. The
+  /// leaked tap is delivered asynchronously via the platform channel, so it
+  /// always arrives just after the synchronous pill tap — this flag lets us
+  /// swallow exactly that one tap. It is cleared the moment the leaked tap is
   /// consumed, and on a short timer as a safety net so it can never eat a later,
   /// deliberate map tap on platforms where no leak occurs (e.g. iOS).
   bool suppressMapTap = false;
@@ -138,14 +136,6 @@ class PlacePickerState extends State<PlacePicker>
 
   _CardState _cardState = _CardState.initial;
 
-  // --- Search panel ---
-  bool _searchActive = false;
-  bool _searchLoading = false;
-  bool _searchEmpty = false;
-  List<RichSuggestion> _suggestions = [];
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-
   bool _locating = false;
 
   // --- Pin animation (lift while dragging) ---
@@ -173,8 +163,6 @@ class PlacePickerState extends State<PlacePicker>
     _idleSuppressionSafety?.cancel();
     _idleDebounce?.cancel();
     _pinController.dispose();
-    _searchController.dispose();
-    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -191,14 +179,10 @@ class PlacePickerState extends State<PlacePicker>
   }
 
   void _onMapTap(LatLng latLng) {
-    // Swallow the tap that leaks through from selecting a search suggestion
+    // Swallow the tap that leaks through from opening search
     // (see [suppressMapTap]); otherwise the map would jump to the tapped point.
     if (suppressMapTap) {
       suppressMapTap = false;
-      return;
-    }
-    if (_searchActive) {
-      _closeSearch();
       return;
     }
     FocusScope.of(context).unfocus();
@@ -210,7 +194,6 @@ class PlacePickerState extends State<PlacePicker>
     // A programmatic move resolves its own address; don't show the drag UI.
     if (_programmaticTarget != null) return;
     _userHasMovedMap = true;
-    if (_searchActive) _closeSearch();
     _liftPin();
     if (_cardState == _CardState.resolved || _cardState == _CardState.error) {
       setState(() => _cardState = _CardState.dragging);
@@ -278,161 +261,36 @@ class PlacePickerState extends State<PlacePicker>
   // Search
   // ---------------------------------------------------------------------------
 
-  void _openSearch() {
-    final wasActive = _searchActive;
-    if (!wasActive) setState(() => _searchActive = true);
-    // Only on the first open: tapping the field leaks a tap through to the
-    // GoogleMap platform view beneath it (the same Android hybrid-composition
-    // touch leak documented on [suppressMapTap]). That leaked GoogleMap.onTap
-    // fires just after this, sees the search as active and runs _closeSearch()
-    // -> unfocus(), dismissing the keyboard before the user can type. Swallow
-    // that one leaked tap so the field keeps focus. Re-arming on every tap
-    // (e.g. re-focusing an already-open field) would keep resetting the 500ms
-    // safety window and could later swallow a deliberate map tap.
-    if (!wasActive) {
-      suppressMapTap = true;
-      _armTapSuppressionSafety();
-    }
-    // Belt-and-suspenders: focus explicitly. TextField's implicit tap-to-focus
-    // is unreliable when an overlay sits above a platform view.
-    if (!_searchFocus.hasFocus) _searchFocus.requestFocus();
-  }
-
-  void _closeSearch() {
-    FocusScope.of(context).unfocus();
-    if (_searchActive || _suggestions.isNotEmpty) {
-      setState(() {
-        _searchActive = false;
-        _suggestions = [];
-        _searchEmpty = false;
-        _searchLoading = false;
-      });
-    }
-  }
-
-  /// Begins the search process and fetches the autocomplete list.
-  void searchPlace(String place) {
-    // On keyboard dismissal the search was being triggered again; cap that.
-    if (place == previousSearchTerm) return;
-    previousSearchTerm = place;
-
-    if (place.isEmpty) {
-      // Clearing the field must not force the panel open (it's opened by
-      // focusing the field via onTap instead).
-      setState(() {
-        _suggestions = [];
-        _searchEmpty = false;
-        _searchLoading = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _searchActive = true;
-      _searchLoading = true;
-      _searchEmpty = false;
-    });
-
-    autoCompleteSearch(place);
-  }
-
-  /// Fetches the place autocomplete list with the query [place].
-  void autoCompleteSearch(String place) async {
-    try {
-      final query = place.replaceAll(' ', '+');
-      final countries = widget.countries;
-
-      // You can filter by up to 5 countries (Places autocomplete docs).
-      final regionParam = countries?.isNotEmpty == true
-          ? "&components=country:${countries!.sublist(0, min(countries.length, 5)).join('|country:')}"
-          : '';
-
-      var endpoint =
-          "https://${widget.hostUrl}/maps/api/place/autocomplete/json?"
-          "key=${widget.apiKey}&"
-          "language=${widget.localizationItem.languageCode}&"
-          "input={$query}$regionParam&sessiontoken=$sessionToken";
-
-      if (locationResult != null) {
-        endpoint += "&location=${locationResult?.latLng?.latitude},"
-            "${locationResult?.latLng?.longitude}";
-      }
-
-      final response = await http.get(Uri.parse(endpoint));
-      if (response.statusCode != 200) throw Error();
-
-      final responseJson = jsonDecode(response.body);
-      if (responseJson['predictions'] == null) throw Error();
-
-      final List<dynamic> predictions = responseJson['predictions'];
-
-      // Ignore a response that arrived after the user changed/cleared the query.
-      if (place != previousSearchTerm) return;
-
-      if (predictions.isEmpty) {
-        setState(() {
-          _suggestions = [];
-          _searchEmpty = true;
-          _searchLoading = false;
-        });
-        return;
-      }
-
-      final List<RichSuggestion> suggestions = [];
-      for (var i = 0; i < predictions.length; i++) {
-        final t = predictions[i];
-        final description = (t['description'] ?? '') as String;
-        final commaIndex = description.indexOf(',');
-        final secondary = commaIndex == -1
-            ? null
-            : description.substring(commaIndex + 1).trim();
-        final types = (t['types'] as List?)?.cast<String>();
-
-        final matched = (t['matched_substrings'] as List?);
-        final first =
-            (matched != null && matched.isNotEmpty) ? matched.first : null;
-
-        final aci = AutoCompleteItem()
-          ..id = t['place_id']
-          ..text = description
-          ..offset = (first?['offset'] as int?) ?? 0
-          ..length = (first?['length'] as int?) ?? 0
-          ..types = types;
-
-        suggestions.add(RichSuggestion(
-          aci,
-          () => _onSuggestionTapped(aci),
-          secondaryText: secondary,
-          leadingIcon: _iconForTypes(types),
-          showDivider: i != predictions.length - 1,
-        ));
-      }
-
-      setState(() {
-        _suggestions = suggestions;
-        _searchEmpty = false;
-        _searchLoading = false;
-      });
-    } catch (e) {
-      debugPrint('autoCompleteSearch error: $e');
-      setState(() {
-        _suggestions = [];
-        _searchEmpty = true;
-        _searchLoading = false;
-      });
-    }
-  }
-
-  void _onSuggestionTapped(AutoCompleteItem aci) {
-    // Block the map's leaked onTap for this selection (see [suppressMapTap]).
+  /// Opens the full-screen search route and acts on the chosen suggestion.
+  ///
+  /// Search runs on its own map-free route ([PlaceSearchPage]) because a
+  /// TextField that shares a route with the GoogleMap platform view only focuses
+  /// through Android's contended touch path, which drops the first tap — the
+  /// user had to tap several times before the cursor appeared. On a map-free
+  /// route the field autofocuses and the keyboard shows immediately.
+  void _openSearch() async {
+    // The pill sits over the map; its tap can leak through to the platform view
+    // (see [suppressMapTap]) and drop a pin where the user merely meant to open
+    // search. Swallow that one leaked tap.
     suppressMapTap = true;
     _armTapSuppressionSafety();
-    _closeSearch();
-    // Reset the field so reopening search starts clean (and a later clear can't
-    // re-open the panel). Reset the guard first so the clear listener no-ops.
-    previousSearchTerm = '';
-    _searchController.clear();
-    decodeAndSelectPlace(aci);
+
+    final selected = await Navigator.of(context).push<AutoCompleteItem>(
+      MaterialPageRoute(
+        builder: (_) => PlaceSearchPage(
+          apiKey: widget.apiKey,
+          hostUrl: widget.hostUrl ?? 'maps.googleapis.com',
+          sessionToken: sessionToken,
+          localizationItem: widget.localizationItem,
+          countries: widget.countries,
+          locationBias: locationResult?.latLng,
+        ),
+      ),
+    );
+
+    if (selected != null) {
+      decodeAndSelectPlace(selected);
+    }
   }
 
   /// Fetches the lat,lng of a selected suggestion and moves there with the rich
@@ -898,47 +756,16 @@ class PlacePickerState extends State<PlacePicker>
                 ),
               ),
 
-            // 5. Scrim while searching. Keyed so that inserting it into the
-            // Stack does not shift the (also keyed) search layer's position:
-            // without keys, this Positioned would reconcile against the search
-            // Positioned, recreating the TextField subtree and dropping its
-            // focus the instant the first tap lands — the "needs two taps to
-            // type" bug.
-            if (_searchActive)
-              Positioned.fill(
-                key: const ValueKey('search-scrim'),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _closeSearch,
-                  child: Container(
-                    color: Colors.black.withValues(alpha: isDark ? 0.50 : 0.25),
-                  ),
-                ),
-              ),
-
-            // 6. Search pill + results panel (always on top). The pill is inset
-            // to clear the close button; the panel below stays full width.
-            // Keyed so it is preserved (not rebuilt) when the scrim above is
-            // inserted/removed — see the scrim's note.
+            // 5. Search pill launcher (always on top). Tapping it opens the
+            // full-screen search route; the pill is inset to clear the back
+            // button.
             Positioned(
-              key: const ValueKey('search-layer'),
               top: media.padding.top + 8,
               left: 16 + padL,
               right: 16 + padR,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding:
-                        EdgeInsets.only(left: canPop ? _kControlSize + 8 : 0),
-                    child: _buildSearchPill(cs, isDark, sheetSurface, loc),
-                  ),
-                  if (_searchActive) ...[
-                    const SizedBox(height: 8),
-                    _buildSearchPanel(cs, isDark, sheetSurface, media, loc),
-                  ],
-                ],
+              child: Padding(
+                padding: EdgeInsets.only(left: canPop ? _kControlSize + 8 : 0),
+                child: _buildSearchPill(cs, isDark, sheetSurface, loc),
               ),
             ),
           ],
@@ -1018,147 +845,19 @@ class PlacePickerState extends State<PlacePicker>
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        // While search is closed we show a non-editable placeholder, not a live
-        // TextField. A TextField that sits permanently over the GoogleMap
-        // platform view only ever focuses through the contended touch path,
-        // which Android drops on the first tap (you'd have to tap twice before
-        // the cursor/keyboard appears). Tapping the placeholder activates search,
-        // which mounts the real field fresh with `autofocus: true` so it focuses
-        // programmatically on mount instead of via that tap path — one tap.
-        child: _searchActive
-            ? SearchInput(
-                searchPlace,
-                bare: true,
-                autofocus: true,
-                hintText: loc.searchHint,
-                controller: _searchController,
-                focusNode: _searchFocus,
-                onTap: _openSearch,
-                onCleared: () => searchPlace(''),
-              )
-            : _SearchPillPlaceholder(
-                hintText: loc.searchHint,
-                iconColor: cs.onSurface.withValues(alpha: isDark ? 0.60 : 0.55),
-                hintColor: cs.onSurface.withValues(alpha: isDark ? 0.55 : 0.60),
-                onTap: _openSearch,
-              ),
+        // The pill is a launcher, never a live field. Tapping it opens the
+        // full-screen search route (see [_openSearch]); a field sitting over the
+        // GoogleMap platform view drops the first tap's focus, so search has to
+        // live on a map-free route to focus on the first tap.
+        child: _SearchPillPlaceholder(
+          hintText: loc.searchHint,
+          iconColor: cs.onSurface.withValues(alpha: isDark ? 0.60 : 0.55),
+          hintColor: cs.onSurface.withValues(alpha: isDark ? 0.55 : 0.60),
+          onTap: _openSearch,
+        ),
       ),
     );
   }
-
-  Widget _buildSearchPanel(ColorScheme cs, bool isDark, Color surface,
-      MediaQueryData media, LocalizationItem loc) {
-    final maxHeight = min(
-      media.size.height * 0.6,
-      media.size.height - media.padding.top - media.viewInsets.bottom - 140,
-    ).clamp(140.0, media.size.height);
-
-    Widget child;
-    if (_searchLoading) {
-      // Fill the available height with skeletons but never overflow it.
-      final rows = ((maxHeight - 3) / 64).floor().clamp(1, 5);
-      child = SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LinearProgressIndicator(
-              minHeight: 3,
-              backgroundColor: cs.primary.withValues(alpha: 0.10),
-              valueColor: AlwaysStoppedAnimation(cs.primary),
-            ),
-            for (int i = 0; i < rows; i++) _SkeletonRow(isLast: i == rows - 1),
-          ],
-        ),
-      );
-    } else if (_searchEmpty) {
-      child = SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.search_off,
-                  size: 40, color: cs.onSurface.withValues(alpha: 0.30)),
-              const SizedBox(height: 12),
-              Text(loc.noResultsFound,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface)),
-              const SizedBox(height: 4),
-              Text(loc.noResultsHint,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurface.withValues(alpha: 0.60))),
-            ],
-          ),
-        ),
-      );
-    } else {
-      child = ListView(
-        padding: EdgeInsets.only(bottom: media.viewInsets.bottom > 0 ? 8 : 0),
-        shrinkWrap: true,
-        children: _suggestions,
-      );
-    }
-
-    // Shadow lives on the outer Container (outside any clip) while the rounded
-    // ClipRRect clips the scrolling content to the panel's corners.
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxHeight.toDouble()),
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(16),
-        border: isDark
-            ? Border.all(color: cs.onSurface.withValues(alpha: 0.08))
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.14),
-            offset: const Offset(0, 8),
-            blurRadius: 28,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: child,
-      ),
-    );
-  }
-
-  IconData _iconForTypes(List<String>? types) {
-    if (types == null) return Icons.location_on;
-    if (types.contains('airport')) return Icons.flight;
-    if (types.contains('lodging')) return Icons.hotel;
-    if (types.contains('restaurant') ||
-        types.contains('food') ||
-        types.contains('cafe')) {
-      return Icons.restaurant;
-    }
-    if (types.contains('transit_station') ||
-        types.contains('subway_station') ||
-        types.contains('train_station') ||
-        types.contains('bus_station')) {
-      return Icons.directions_transit;
-    }
-    if (types.contains('street_address') || types.contains('route')) {
-      return Icons.route;
-    }
-    if (types.contains('locality') ||
-        types.contains('administrative_area_level_1') ||
-        types.contains('political')) {
-      return Icons.location_city;
-    }
-    if (types.contains('establishment') ||
-        types.contains('point_of_interest')) {
-      return Icons.place;
-    }
-    return Icons.location_on;
-  }
-}
 
 /// Approximate great-circle distance in meters (equirectangular projection),
 /// good enough for the small-move geocode guard.
