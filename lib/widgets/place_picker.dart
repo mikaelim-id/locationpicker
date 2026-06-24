@@ -1018,15 +1018,30 @@ class PlacePickerState extends State<PlacePicker>
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: SearchInput(
-          searchPlace,
-          bare: true,
-          hintText: loc.searchHint,
-          controller: _searchController,
-          focusNode: _searchFocus,
-          onTap: _openSearch,
-          onCleared: () => searchPlace(''),
-        ),
+        // While search is closed we show a non-editable placeholder, not a live
+        // TextField. A TextField that sits permanently over the GoogleMap
+        // platform view only ever focuses through the contended touch path,
+        // which Android drops on the first tap (you'd have to tap twice before
+        // the cursor/keyboard appears). Tapping the placeholder activates search,
+        // which mounts the real field fresh with `autofocus: true` so it focuses
+        // programmatically on mount instead of via that tap path — one tap.
+        child: _searchActive
+            ? SearchInput(
+                searchPlace,
+                bare: true,
+                autofocus: true,
+                hintText: loc.searchHint,
+                controller: _searchController,
+                focusNode: _searchFocus,
+                onTap: _openSearch,
+                onCleared: () => searchPlace(''),
+              )
+            : _SearchPillPlaceholder(
+                hintText: loc.searchHint,
+                iconColor: cs.onSurface.withValues(alpha: isDark ? 0.60 : 0.55),
+                hintColor: cs.onSurface.withValues(alpha: isDark ? 0.55 : 0.60),
+                onTap: _openSearch,
+              ),
       ),
     );
   }
@@ -1154,6 +1169,49 @@ double _distanceMeters(LatLng a, LatLng b) {
   final meanLat = (a.latitude + b.latitude) / 2 * pi / 180;
   final x = dLng * cos(meanLat);
   return earth * sqrt(x * x + dLat * dLat);
+}
+
+/// Static, non-editable stand-in for the search field shown while search is
+/// closed. Its row matches an empty [SearchInput] (search glyph, hint, trailing
+/// gap) so the pill does not jump when search activates and the real field is
+/// mounted in its place. Tapping it activates search; the field that replaces it
+/// autofocuses on mount, which is what makes a single tap focus reliably over
+/// the GoogleMap platform view.
+class _SearchPillPlaceholder extends StatelessWidget {
+  final String hintText;
+  final Color iconColor;
+  final Color hintColor;
+  final VoidCallback onTap;
+
+  const _SearchPillPlaceholder({
+    required this.hintText,
+    required this.iconColor,
+    required this.hintColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.search, size: 22, color: iconColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              hintText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 16, color: hintColor),
+            ),
+          ),
+          const SizedBox(width: 20, height: 20),
+        ],
+      ),
+    );
+  }
 }
 
 /// Themed circular icon button used for the FAB and close affordance.
